@@ -1,19 +1,41 @@
-# Backend Skeleton
+# Backend Scaffold (NestJS)
 
-이 폴더는 실제 서비스 구현 전 백엔드 구조를 합의하기 위한 최소 스켈레톤이다.
+DogWalk 백엔드의 실행 가능한 초기 구조입니다.
 
-## 추천 구조 (NestJS 스타일 예시)
-- `src/auth` 인증
-- `src/users` 회원/프로필
-- `src/dogs` 반려견
-- `src/walks` 요청/세션/위치
-- `src/payments` 결제/환불
-- `src/settlements` 정산
-- `src/credits` 크레딧
-- `src/admin` 관리자 기능
+## 구현된 내용
+- NestJS 부트스트랩 + 전역 prefix `api/v1`
+- ValidationPipe 설정
+- 도메인 모듈 스켈레톤
+  - auth, users, dogs, walks, payments, settlements, credits, admin
+- 기본 헬스체크 API
+  - `GET /api/v1/health`
+- SQL 초안 스키마
+  - `db/schema.sql`
+- 로컬 인프라
+  - `docker-compose.dev.yml` (Postgres, Redis)
+
+## 실행 방법
+```bash
+cd backend
+npm install
+docker compose -f docker-compose.dev.yml up -d
+npm run start:dev
+```
+
+## API 예시
+- `POST /api/v1/auth/signup/owner`
+- `POST /api/v1/auth/signup/walker`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/users/me`
+- `GET /api/v1/dogs`
+- `GET /api/v1/walk-requests`
+- `POST /api/v1/payments/prepare`
+- `GET /api/v1/settlements/me`
+- `GET /api/v1/credits/wallet`
+- `GET /api/v1/admin/walkers/pending`
 
 ## 다음 단계
-1. 프레임워크 생성 후 모듈별 DTO/Entity 정의
-2. DB 마이그레이션 작성
-3. 결제사 연동 샌드박스 테스트
-4. 위치 WebSocket 부하 테스트
+1. DB ORM(Prisma/TypeORM) 도입 및 마이그레이션 자동화
+2. JWT 인증/인가 가드 및 role-based access 적용
+3. 결제사 연동 어댑터 구현
+4. WebSocket 위치 스트리밍 구현
