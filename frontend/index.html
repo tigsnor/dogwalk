@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DogWalk Front Prototype</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-blur bg-1"></div>
+    <div class="bg-blur bg-2"></div>
+
+    <header class="topbar glass">
+      <div class="logo">로고이미지</div>
+      <nav>
+        <a href="#home">홈</a>
+        <a href="#proxy">대리산책</a>
+        <a href="#self">셀프산책</a>
+        <a href="#shop">쇼핑몰</a>
+      </nav>
+      <button class="pill">로그인</button>
+    </header>
+
+    <main id="home" class="container">
+      <section class="hero glass lift">
+        <div class="hero-text">
+          <p class="eyebrow">DogWalk</p>
+          <h1>반려견 산책을 더 쉽고, 더 안전하게</h1>
+          <p>
+            견주 앱 · 워커 앱 · 관리자 웹을 위한 통합 서비스 프로토타입 화면입니다.
+          </p>
+          <div class="hero-cta">
+            <button class="pill primary">대리산책 예약</button>
+            <button class="pill ghost">셀프산책 시작</button>
+          </div>
+        </div>
+        <div class="hero-image placeholder">강아지사진이미지</div>
+      </section>
+
+      <section id="proxy" class="grid two">
+        <article class="card glass lift">
+          <h2>대리산책 요청</h2>
+          <p>날짜/시간, 강아지, 요청사항을 입력해 간편하게 예약하세요.</p>
+          <div class="placeholder">산책예약지도이미지</div>
+        </article>
+        <article class="card glass lift">
+          <h2>실시간 위치 확인</h2>
+          <p>워커 위치를 실시간으로 확인하고 산책 진행 상태를 볼 수 있어요.</p>
+          <div class="placeholder">실시간트래킹지도이미지</div>
+        </article>
+      </section>
+
+      <section id="self" class="grid three">
+        <article class="card glass lift">
+          <h3>셀프산책 시작/종료</h3>
+          <p>원터치로 기록을 시작하고 종료하세요.</p>
+          <button class="pill small pulse">시작</button>
+        </article>
+        <article class="card glass lift">
+          <h3>산책 리포트</h3>
+          <p>거리, 속도, 소요시간을 자동으로 저장합니다.</p>
+          <div class="stat">2.8 km · 39 min · 4.3 km/h</div>
+        </article>
+        <article class="card glass lift">
+          <h3>기록 사진</h3>
+          <p>산책마다 사진과 메모를 남길 수 있어요.</p>
+          <div class="placeholder">산책기록사진이미지</div>
+        </article>
+      </section>
+
+      <section id="shop" class="grid two">
+        <article class="card glass lift">
+          <h2>쇼핑몰</h2>
+          <p>산책용품을 보고 크레딧으로 결제할 수 있습니다.</p>
+          <div class="placeholder">쇼핑상품이미지</div>
+        </article>
+        <article class="card glass lift">
+          <h2>크레딧 지갑</h2>
+          <p>산책으로 적립한 크레딧을 확인하고 사용하세요.</p>
+          <div class="wallet">현재 크레딧 <strong>12,450P</strong></div>
+        </article>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>© 2026 DogWalk Prototype</p>
+    </footer>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
