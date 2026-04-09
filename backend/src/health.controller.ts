@@ -1,0 +1,15 @@
+import { Controller, Get } from '@nestjs/common';
+import { Public } from './common/decorators/public.decorator';
+
+@Controller('health')
+@Public()
+export class HealthController {
+  @Get()
+  getHealth() {
+    return {
+      status: 'ok',
+      service: 'dogwalk-backend',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
