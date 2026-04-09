@@ -27,3 +27,7 @@ npm run start:dev
 
 ## 프론트 프로토타입
 `frontend/index.html` 파일을 브라우저에서 열면 UI 프로토타입을 확인할 수 있습니다.
+
+## 앱/웹 프레임워크 스캐폴드
+- 모바일 앱(Flutter): `apps/mobile_flutter`
+- 관리자 웹(Next.js): `apps/admin_web_next`
