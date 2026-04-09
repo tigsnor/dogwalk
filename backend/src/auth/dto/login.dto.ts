@@ -1,7 +1,7 @@
-import { IsPhoneNumber, IsString, MinLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
 
 export class LoginDto {
-  @IsPhoneNumber('KR')
+  @IsString()
   phone!: string;
 
   @IsString()
