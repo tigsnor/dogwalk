@@ -3,122 +3,88 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DogWalk Front UI</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <title>DogWalk Front Prototype</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="noise"></div>
+    <div class="bg-blur bg-1"></div>
+    <div class="bg-blur bg-2"></div>
 
     <header class="topbar glass">
-      <div class="logo-box">로고이미지</div>
+      <div class="logo">로고이미지</div>
       <nav>
-        <a href="#features">기능</a>
-        <a href="#screens">화면</a>
-        <a href="#cta">시작하기</a>
+        <a href="#home">홈</a>
+        <a href="#proxy">대리산책</a>
+        <a href="#self">셀프산책</a>
+        <a href="#shop">쇼핑몰</a>
       </nav>
-      <button class="btn btn-ghost">문의하기</button>
+      <button class="pill">로그인</button>
     </header>
 
-    <main>
-      <section class="hero glass">
+    <main id="home" class="container">
+      <section class="hero glass lift">
         <div class="hero-text">
-          <span class="chip">DogWalk MVP Front</span>
-          <h1>
-            반려견 대리산책을 위한<br />
-            <span>간단하지만 세련된</span> 프론트 UI
-          </h1>
+          <p class="eyebrow">DogWalk</p>
+          <h1>반려견 산책을 더 쉽고, 더 안전하게</h1>
           <p>
-            견주 앱 / 워커 앱 / 관리자 웹의 핵심 화면을 한 번에 확인할 수 있는
-            프론트 기본안입니다.
+            견주 앱 · 워커 앱 · 관리자 웹을 위한 통합 서비스 프로토타입 화면입니다.
           </p>
-          <div class="hero-actions">
-            <button class="btn btn-primary">서비스 체험하기</button>
-            <button class="btn btn-secondary">디자인 시스템 보기</button>
+          <div class="hero-cta">
+            <button class="pill primary">대리산책 예약</button>
+            <button class="pill ghost">셀프산책 시작</button>
           </div>
         </div>
-        <div class="hero-image glass-inner floating">
-          <p>강아지사진이미지</p>
-        </div>
+        <div class="hero-image placeholder">강아지사진이미지</div>
       </section>
 
-      <section id="features" class="section">
-        <h2>핵심 기능 프리뷰</h2>
-        <div class="cards">
-          <article class="card glass hover-glow">
-            <h3>실시간 산책 추적</h3>
-            <p>지도 위에서 워커 위치, 이동거리, 진행시간을 실시간으로 표시.</p>
-            <div class="placeholder">지도이미지</div>
-          </article>
-          <article class="card glass hover-glow">
-            <h3>셀프 산책 기록</h3>
-            <p>시작/종료 버튼으로 간단 기록 후 리포트와 크레딧 자동 적립.</p>
-            <div class="placeholder">산책기록차트이미지</div>
-          </article>
-          <article class="card glass hover-glow">
-            <h3>크레딧 쇼핑몰 연동</h3>
-            <p>산책으로 모은 크레딧을 제휴 상품 결제에 즉시 사용 가능.</p>
-            <div class="placeholder">쇼핑몰상품이미지</div>
-          </article>
-        </div>
+      <section id="proxy" class="grid two">
+        <article class="card glass lift">
+          <h2>대리산책 요청</h2>
+          <p>날짜/시간, 강아지, 요청사항을 입력해 간편하게 예약하세요.</p>
+          <div class="placeholder">산책예약지도이미지</div>
+        </article>
+        <article class="card glass lift">
+          <h2>실시간 위치 확인</h2>
+          <p>워커 위치를 실시간으로 확인하고 산책 진행 상태를 볼 수 있어요.</p>
+          <div class="placeholder">실시간트래킹지도이미지</div>
+        </article>
       </section>
 
-      <section id="screens" class="section tabs-section">
-        <h2>앱별 화면 구성</h2>
-        <div class="tabs" role="tablist" aria-label="앱 화면 탭">
-          <button class="tab active" data-tab="owner">견주 앱</button>
-          <button class="tab" data-tab="walker">워커 앱</button>
-          <button class="tab" data-tab="admin">관리자 웹</button>
-        </div>
-
-        <div class="tab-panels">
-          <article class="tab-panel active glass" id="panel-owner">
-            <h3>견주 앱</h3>
-            <ul>
-              <li>홈 대시보드 / 반려견 관리</li>
-              <li>대리산책 요청 / 결제 / 실시간 추적</li>
-              <li>셀프 산책 기록 / 크레딧 지갑 / 쇼핑몰</li>
-            </ul>
-            <div class="placeholder">견주앱목업이미지</div>
-          </article>
-
-          <article class="tab-panel glass" id="panel-walker">
-            <h3>워커 앱</h3>
-            <ul>
-              <li>요청 목록 / 수락 / 이동 시작</li>
-              <li>산책 시작/종료 / 사진 업로드</li>
-              <li>정산 내역 / 리뷰 확인</li>
-            </ul>
-            <div class="placeholder">워커앱목업이미지</div>
-          </article>
-
-          <article class="tab-panel glass" id="panel-admin">
-            <h3>관리자 웹</h3>
-            <ul>
-              <li>워커 심사 / 회원 관리 / 분쟁 처리</li>
-              <li>결제/환불/정산 운영</li>
-              <li>운영 KPI 대시보드</li>
-            </ul>
-            <div class="placeholder">관리자대시보드이미지</div>
-          </article>
-        </div>
+      <section id="self" class="grid three">
+        <article class="card glass lift">
+          <h3>셀프산책 시작/종료</h3>
+          <p>원터치로 기록을 시작하고 종료하세요.</p>
+          <button class="pill small pulse">시작</button>
+        </article>
+        <article class="card glass lift">
+          <h3>산책 리포트</h3>
+          <p>거리, 속도, 소요시간을 자동으로 저장합니다.</p>
+          <div class="stat">2.8 km · 39 min · 4.3 km/h</div>
+        </article>
+        <article class="card glass lift">
+          <h3>기록 사진</h3>
+          <p>산책마다 사진과 메모를 남길 수 있어요.</p>
+          <div class="placeholder">산책기록사진이미지</div>
+        </article>
       </section>
 
-      <section id="cta" class="cta glass">
-        <div>
-          <h2>지금 바로 MVP 구축을 시작하세요</h2>
-          <p>이 화면을 기준으로 API 연동만 붙이면 빠르게 프로토타입을 완성할 수 있어요.</p>
-        </div>
-        <button class="btn btn-primary pulse">프로젝트 시작하기</button>
+      <section id="shop" class="grid two">
+        <article class="card glass lift">
+          <h2>쇼핑몰</h2>
+          <p>산책용품을 보고 크레딧으로 결제할 수 있습니다.</p>
+          <div class="placeholder">쇼핑상품이미지</div>
+        </article>
+        <article class="card glass lift">
+          <h2>크레딧 지갑</h2>
+          <p>산책으로 적립한 크레딧을 확인하고 사용하세요.</p>
+          <div class="wallet">현재 크레딧 <strong>12,450P</strong></div>
+        </article>
       </section>
     </main>
+
+    <footer class="footer">
+      <p>© 2026 DogWalk Prototype</p>
+    </footer>
 
     <script src="./app.js"></script>
   </body>

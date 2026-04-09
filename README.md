@@ -26,5 +26,4 @@ npm run start:dev
 
 
 ## 프론트 프로토타입
-- `frontend/index.html`
-- 가이드: `frontend/README.md`
+`frontend/index.html` 파일을 브라우저에서 열면 UI 프로토타입을 확인할 수 있습니다.
