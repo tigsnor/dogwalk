@@ -23,3 +23,8 @@ npm run start:dev
 
 헬스체크:
 - `GET http://localhost:3000/api/v1/health`
+
+
+## 프론트 프로토타입
+- `frontend/index.html`
+- 가이드: `frontend/README.md`
