@@ -2,9 +2,11 @@ import 'reflect-metadata';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { getEnv } from './config/env';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const env = getEnv();
 
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(
@@ -15,10 +17,9 @@ async function bootstrap() {
     }),
   );
 
-  const port = Number(process.env.PORT ?? 3000);
-  await app.listen(port);
+  await app.listen(env.port);
   // eslint-disable-next-line no-console
-  console.log(`DogWalk API running on port ${port}`);
+  console.log(`DogWalk API running on port ${env.port}`);
 }
 
 void bootstrap();

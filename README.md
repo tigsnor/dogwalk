@@ -7,6 +7,9 @@
 - ERD: `docs/erd.md`
 - API 초안: `docs/api-spec.md`
 - 화면 목록: `docs/screen-list.md`
+- Sprint 1 계획: `docs/plans/sprint-1-plan.md`
+- 제품 백로그: `docs/plans/product-backlog.md`
+- 이슈 템플릿: `docs/plans/issue-templates.md`
 
 ## 백엔드 실행 준비
 백엔드 스캐폴드는 `backend/` 폴더에 있습니다.
@@ -20,3 +23,11 @@ npm run start:dev
 
 헬스체크:
 - `GET http://localhost:3000/api/v1/health`
+
+
+## 프론트 프로토타입
+`frontend/index.html` 파일을 브라우저에서 열면 UI 프로토타입을 확인할 수 있습니다.
+
+## 앱/웹 프레임워크 스캐폴드
+- 모바일 앱(Flutter): `apps/mobile_flutter`
+- 관리자 웹(Next.js): `apps/admin_web_next`
