@@ -22,7 +22,8 @@ npm run start:dev
 ## 현재 동작하는 핵심 API
 - `POST /api/v1/auth/signup/owner`
 - `POST /api/v1/auth/signup/walker`
-- `POST /api/v1/auth/login` (Bearer 토큰 발급)
+- `POST /api/v1/auth/login` (JWT access/refresh 발급)
+- `POST /api/v1/auth/refresh` (refresh 토큰 재발급)
 - `GET /api/v1/users/me` (인증 필요)
 - `GET /api/v1/dogs` (owner 전용)
 - `POST /api/v1/dogs` (owner 전용)
@@ -32,8 +33,9 @@ npm run start:dev
 
 ## 인증 방식 (현재)
 1. 회원가입
-2. 로그인 후 `accessToken` 획득
-3. 보호 API 호출 시 헤더 포함
+2. 로그인 후 `accessToken`/`refreshToken` 획득
+3. 액세스 토큰 만료 시 `POST /api/v1/auth/refresh` 호출
+4. 보호 API 호출 시 헤더 포함
 
 ```http
 Authorization: Bearer <accessToken>
@@ -41,6 +43,4 @@ Authorization: Bearer <accessToken>
 
 ## 다음 단계
 1. 인메모리 저장소(AppStore) → DB/ORM(Prisma/TypeORM) 전환
-2. sha256 임시 비밀번호 해시 → bcrypt로 교체
-3. UUID 토큰 임시 인증 → JWT access/refresh 도입
-4. 산책/결제/정산/크레딧 비즈니스 로직 확장
+2. 산책/결제/정산/크레딧 비즈니스 로직 확장

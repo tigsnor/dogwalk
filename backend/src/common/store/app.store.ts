@@ -13,6 +13,6 @@ export type Dog = {
 export class AppStore {
   users = new Map<string, AuthUser>();
   usersByPhone = new Map<string, string>();
-  tokens = new Map<string, string>();
+  refreshTokens = new Map<string, string>();
   dogs = new Map<string, Dog>();
 }
