@@ -3,9 +3,13 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import * as bcrypt from 'bcryptjs';
+import * as jwt from 'jsonwebtoken';
 import { AppStore } from '../common/store/app.store';
+import { getEnv } from '../config/env';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SignUpOwnerDto } from './dto/signup-owner.dto';
 import { SignUpWalkerDto } from './dto/signup-walker.dto';
 
@@ -13,11 +17,32 @@ import { SignUpWalkerDto } from './dto/signup-walker.dto';
 export class AuthService {
   constructor(private readonly store: AppStore) {}
 
-  private hashPassword(password: string) {
-    return createHash('sha256').update(password).digest('hex');
+  private async hashPassword(password: string) {
+    return bcrypt.hash(password, 12);
   }
 
-  signUpOwner(dto: SignUpOwnerDto) {
+  private issueTokens(userId: string) {
+    const env = getEnv();
+    const accessToken = jwt.sign({ sub: userId }, env.jwtSecret, {
+      algorithm: 'HS256',
+      expiresIn: env.jwtAccessExpiresInSec,
+    });
+    const refreshToken = jwt.sign({ sub: userId, jti: randomUUID() }, env.jwtRefreshSecret, {
+      algorithm: 'HS256',
+      expiresIn: env.jwtRefreshExpiresInSec,
+    });
+
+    this.store.refreshTokens.set(refreshToken, userId);
+
+    return {
+      accessToken,
+      refreshToken,
+      tokenType: 'Bearer',
+      expiresInSec: env.jwtAccessExpiresInSec,
+    };
+  }
+
+  async signUpOwner(dto: SignUpOwnerDto) {
     if (this.store.usersByPhone.has(dto.phone)) {
       throw new ConflictException('Phone already exists');
     }
@@ -28,14 +53,14 @@ export class AuthService {
       role: 'owner',
       name: dto.name,
       phone: dto.phone,
-      passwordHash: this.hashPassword(dto.password),
+      passwordHash: await this.hashPassword(dto.password),
     });
     this.store.usersByPhone.set(dto.phone, userId);
 
     return { userId, role: 'owner' };
   }
 
-  signUpWalker(dto: SignUpWalkerDto) {
+  async signUpWalker(dto: SignUpWalkerDto) {
     if (this.store.usersByPhone.has(dto.phone)) {
       throw new ConflictException('Phone already exists');
     }
@@ -46,7 +71,7 @@ export class AuthService {
       role: 'walker',
       name: dto.name,
       phone: dto.phone,
-      passwordHash: this.hashPassword(dto.password),
+      passwordHash: await this.hashPassword(dto.password),
     });
     this.store.usersByPhone.set(dto.phone, userId);
 
@@ -58,23 +83,24 @@ export class AuthService {
     };
   }
 
-  login(dto: LoginDto) {
+  async login(dto: LoginDto) {
     const userId = this.store.usersByPhone.get(dto.phone);
     if (!userId) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const user = this.store.users.get(userId);
-    if (!user || user.passwordHash !== this.hashPassword(dto.password)) {
+    if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const accessToken = randomUUID();
-    this.store.tokens.set(accessToken, user.id);
+    const isValidPassword = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!isValidPassword) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
     return {
-      accessToken,
-      tokenType: 'Bearer',
+      ...this.issueTokens(user.id),
       user: {
         id: user.id,
         name: user.name,
@@ -82,5 +108,27 @@ export class AuthService {
         phone: user.phone,
       },
     };
+  }
+
+  refresh(dto: RefreshTokenDto) {
+    const env = getEnv();
+
+    const userId = this.store.refreshTokens.get(dto.refreshToken);
+    if (!userId) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    try {
+      const payload = jwt.verify(dto.refreshToken, env.jwtRefreshSecret) as jwt.JwtPayload;
+      if (payload.sub !== userId) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+    } catch {
+      this.store.refreshTokens.delete(dto.refreshToken);
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    this.store.refreshTokens.delete(dto.refreshToken);
+    return this.issueTokens(userId);
   }
 }
