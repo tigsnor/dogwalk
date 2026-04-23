@@ -11,6 +11,16 @@ DogWalk 백엔드의 실행 가능한 초기 구조입니다.
 - SQL 초안 스키마 (`db/schema.sql`)
 - 로컬 인프라 (`docker-compose.dev.yml`: Postgres, Redis)
 
+## 환경변수 보안 요구사항
+- `JWT_SECRET`, `JWT_REFRESH_SECRET`는 **필수**입니다.
+- 기본 placeholder 값(`replace-with-...`, `change-me`)은 허용되지 않습니다.
+- 두 시크릿 모두 최소 32자 이상이어야 합니다.
+- 권장 생성 예시:
+
+```bash
+openssl rand -hex 32
+```
+
 ## 실행 방법
 ## 환경변수 보안 요구사항
 - `JWT_SECRET`, `JWT_REFRESH_SECRET`는 **필수**입니다.
@@ -38,6 +48,14 @@ npm run start:dev
 - `GET /api/v1/dogs` (owner 전용)
 - `POST /api/v1/dogs` (owner 전용)
 - `PATCH /api/v1/dogs/:dogId` (owner 전용)
+- `POST /api/v1/walk-requests` (owner 전용)
+- `GET /api/v1/walk-requests` (owner/walker/admin)
+- `GET /api/v1/walk-requests/:id` (owner/walker/admin)
+- `POST /api/v1/walk-requests/:id/cancel` (owner 전용)
+- `POST /api/v1/walk-requests/:id/accept` (walker 전용)
+- `POST /api/v1/walk-sessions/:id/start` (walker 전용)
+- `POST /api/v1/walk-sessions/:id/finish` (walker 전용)
+- `GET /api/v1/walk-sessions/:id` (owner/walker)
 - `GET /api/v1/admin/walkers/pending` (admin 전용)
 - `GET /api/v1/health` (공개)
 
