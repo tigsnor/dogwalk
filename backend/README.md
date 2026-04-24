@@ -9,6 +9,7 @@ DogWalk 백엔드의 실행 가능한 초기 구조입니다.
 - 도메인 모듈 스켈레톤
   - auth, users, dogs, walks, payments, settlements, credits, admin
 - SQL 초안 스키마 (`db/schema.sql`)
+- 앱 상태 스냅샷 영속화(PostgreSQL `app_state` 테이블)
 - 로컬 인프라 (`docker-compose.dev.yml`: Postgres, Redis)
 
 ## 환경변수 보안 요구사항
@@ -80,5 +81,5 @@ Authorization: Bearer <accessToken>
 ```
 
 ## 다음 단계
-1. 인메모리 저장소(AppStore) → DB/ORM(Prisma/TypeORM) 전환
+1. 도메인별 정규화 테이블 + ORM(Prisma/TypeORM)로 스냅샷 저장 구조 고도화
 2. 산책/결제/정산/크레딧 비즈니스 로직 확장
