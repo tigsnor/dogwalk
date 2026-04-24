@@ -23,6 +23,16 @@ openssl rand -hex 32
 ```
 
 ## 실행 방법
+## 환경변수 보안 요구사항
+- `JWT_SECRET`, `JWT_REFRESH_SECRET`는 **필수**입니다.
+- 기본 placeholder 값(`replace-with-...`, `change-me`)은 허용되지 않습니다.
+- 두 시크릿 모두 최소 32자 이상이어야 합니다.
+- 권장 생성 예시:
+
+```bash
+openssl rand -hex 32
+```
+
 ```bash
 cd backend
 npm install
