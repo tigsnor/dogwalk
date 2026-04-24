@@ -5,6 +5,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import * as jwt from 'jsonwebtoken';
+import { getEnv } from '../../config/env';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { AppStore } from '../store/app.store';
 
@@ -29,9 +31,19 @@ export class AuthGuard implements CanActivate {
     }
 
     const token = auth.replace('Bearer ', '').trim();
-    const userId = this.store.tokens.get(token);
-    if (!userId) {
+
+    const env = getEnv();
+    let payload: jwt.JwtPayload;
+
+    try {
+      payload = jwt.verify(token, env.jwtSecret) as jwt.JwtPayload;
+    } catch {
       throw new UnauthorizedException('Invalid token');
+    }
+
+    const userId = payload.sub;
+    if (typeof userId !== 'string') {
+      throw new UnauthorizedException('Invalid token payload');
     }
 
     const user = this.store.users.get(userId);
