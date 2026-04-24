@@ -43,6 +43,46 @@ export type WalkSession = {
   updatedAt: string;
 };
 
+export type PaymentStatus = 'prepared' | 'confirmed' | 'refunded';
+
+export type Payment = {
+  id: string;
+  ownerUserId: string;
+  walkSessionId: string;
+  provider: 'card' | 'easy-pay' | 'offline-pos';
+  amountTotal: number;
+  creditUsed: number;
+  amountPaid: number;
+  status: PaymentStatus;
+  confirmedAt?: string;
+  refundedAt?: string;
+  refundReason?: string;
+  settlementId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreditLedgerType = 'earn' | 'spend' | 'expire' | 'adjust' | 'refund';
+
+export type CreditLedgerEntry = {
+  id: string;
+  userId: string;
+  type: CreditLedgerType;
+  amount: number;
+  memo?: string;
+  createdAt: string;
+};
+
+export type Settlement = {
+  id: string;
+  walkerUserId: string;
+  paymentIds: string[];
+  grossAmount: number;
+  feeAmount: number;
+  netAmount: number;
+  createdAt: string;
+};
+
 @Injectable()
 export class AppStore {
   users = new Map<string, AuthUser>();
@@ -51,4 +91,9 @@ export class AppStore {
   dogs = new Map<string, Dog>();
   walkRequests = new Map<string, WalkRequest>();
   walkSessions = new Map<string, WalkSession>();
+
+  payments = new Map<string, Payment>();
+  creditBalances = new Map<string, number>();
+  creditLedger: CreditLedgerEntry[] = [];
+  settlements = new Map<string, Settlement>();
 }
