@@ -3,40 +3,35 @@ import { randomUUID } from 'node:crypto';
 import { AppStore } from '../common/store/app.store';
 import { CreateDogDto } from './dto/create-dog.dto';
 import { UpdateDogDto } from './dto/update-dog.dto';
+import { DogsRepository } from './dogs.repository';
 
 @Injectable()
 export class DogsService {
-  constructor(private readonly store: AppStore) {}
+  constructor(
+    private readonly store: AppStore,
+    private readonly dogsRepository: DogsRepository,
+  ) {}
 
-  findMine(ownerUserId: string) {
-    return [...this.store.dogs.values()].filter(
-      (dog) => dog.ownerUserId === ownerUserId,
-    );
+  async findMine(ownerUserId: string) {
+    const dogs = await this.dogsRepository.findMine(ownerUserId);
+    for (const dog of dogs) {
+      this.store.dogs.set(dog.id, dog);
+    }
+    return dogs;
   }
 
-  create(ownerUserId: string, dto: CreateDogDto) {
-    const id = randomUUID();
-    const dog = {
-      id,
-      ownerUserId,
-      name: dto.name,
-      breed: dto.breed,
-      animalRegistrationNo: dto.animalRegistrationNo,
-    };
-    this.store.dogs.set(id, dog);
+  async create(ownerUserId: string, dto: CreateDogDto) {
+    const dog = await this.dogsRepository.create(ownerUserId, randomUUID(), dto);
+    this.store.dogs.set(dog.id, dog);
     return dog;
   }
 
-  update(ownerUserId: string, dogId: string, dto: UpdateDogDto) {
-    const dog = this.store.dogs.get(dogId);
-    if (!dog || dog.ownerUserId !== ownerUserId) {
+  async update(ownerUserId: string, dogId: string, dto: UpdateDogDto) {
+    const updated = await this.dogsRepository.update(ownerUserId, dogId, dto);
+    if (!updated) {
       throw new NotFoundException('Dog not found');
     }
 
-    const updated = {
-      ...dog,
-      ...dto,
-    };
     this.store.dogs.set(dogId, updated);
     return updated;
   }
