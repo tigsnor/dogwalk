@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AppStore } from '../common/store/app.store';
+import { UsersRepository } from '../common/repositories/users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly store: AppStore) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
-  getMe(userId: string) {
-    const user = this.store.users.get(userId);
+  async getMe(userId: string) {
+    const user = await this.usersRepository.findById(userId);
     if (!user) {
       throw new NotFoundException('User not found');
     }

@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AuthUser } from '../types/auth-user';
+import { DbStateService } from './db-state.service';
 
 export type Dog = {
   id: string;
@@ -9,10 +10,162 @@ export type Dog = {
   animalRegistrationNo?: string;
 };
 
+export type WalkRequestStatus = 'pending' | 'accepted' | 'cancelled';
+
+export type WalkRequest = {
+  id: string;
+  ownerUserId: string;
+  dogId: string;
+  scheduledAt: string;
+  requestNote?: string;
+  status: WalkRequestStatus;
+  walkerUserId?: string;
+  walkSessionId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WalkSessionStatus = 'accepted' | 'in_progress' | 'finished';
+
+export type WalkSession = {
+  id: string;
+  walkRequestId: string;
+  ownerUserId: string;
+  walkerUserId: string;
+  dogId: string;
+  status: WalkSessionStatus;
+  startedAt?: string;
+  finishedAt?: string;
+  distanceM?: number;
+  durationSec?: number;
+  avgSpeedKmh?: number;
+  memo?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PaymentStatus = 'prepared' | 'confirmed' | 'refunded';
+
+export type Payment = {
+  id: string;
+  ownerUserId: string;
+  walkSessionId: string;
+  provider: 'card' | 'easy-pay' | 'offline-pos';
+  amountTotal: number;
+  creditUsed: number;
+  amountPaid: number;
+  status: PaymentStatus;
+  confirmedAt?: string;
+  refundedAt?: string;
+  refundReason?: string;
+  settlementId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreditLedgerType = 'earn' | 'spend' | 'expire' | 'adjust' | 'refund';
+
+export type CreditLedgerEntry = {
+  id: string;
+  userId: string;
+  type: CreditLedgerType;
+  amount: number;
+  memo?: string;
+  createdAt: string;
+};
+
+export type Settlement = {
+  id: string;
+  walkerUserId: string;
+  paymentIds: string[];
+  grossAmount: number;
+  feeAmount: number;
+  netAmount: number;
+  createdAt: string;
+};
+
+type PersistedState = {
+  users: [string, AuthUser][];
+  usersByPhone: [string, string][];
+  refreshTokens: [string, string][];
+  dogs: [string, Dog][];
+  walkRequests: [string, WalkRequest][];
+  walkSessions: [string, WalkSession][];
+  payments: [string, Payment][];
+  creditBalances: [string, number][];
+  creditLedger: CreditLedgerEntry[];
+  settlements: [string, Settlement][];
+};
+
 @Injectable()
-export class AppStore {
+export class AppStore implements OnModuleInit {
+  private readonly logger = new Logger(AppStore.name);
+  private readonly stateKey = 'default';
+
   users = new Map<string, AuthUser>();
   usersByPhone = new Map<string, string>();
-  tokens = new Map<string, string>();
+  refreshTokens = new Map<string, string>();
   dogs = new Map<string, Dog>();
+  walkRequests = new Map<string, WalkRequest>();
+  walkSessions = new Map<string, WalkSession>();
+
+  payments = new Map<string, Payment>();
+  creditBalances = new Map<string, number>();
+  creditLedger: CreditLedgerEntry[] = [];
+  settlements = new Map<string, Settlement>();
+
+  constructor(private readonly dbStateService: DbStateService) {}
+
+  async onModuleInit() {
+    await this.dbStateService.ensureSchema();
+    await this.loadSnapshot();
+  }
+
+  private serialize(): PersistedState {
+    return {
+      users: [...this.users.entries()],
+      usersByPhone: [...this.usersByPhone.entries()],
+      refreshTokens: [...this.refreshTokens.entries()],
+      dogs: [...this.dogs.entries()],
+      walkRequests: [...this.walkRequests.entries()],
+      walkSessions: [...this.walkSessions.entries()],
+      payments: [...this.payments.entries()],
+      creditBalances: [...this.creditBalances.entries()],
+      creditLedger: this.creditLedger,
+      settlements: [...this.settlements.entries()],
+    };
+  }
+
+  private hydrate(snapshot: PersistedState) {
+    this.users = new Map(snapshot.users ?? []);
+    this.usersByPhone = new Map(snapshot.usersByPhone ?? []);
+    this.refreshTokens = new Map(snapshot.refreshTokens ?? []);
+    this.dogs = new Map(snapshot.dogs ?? []);
+    this.walkRequests = new Map(snapshot.walkRequests ?? []);
+    this.walkSessions = new Map(snapshot.walkSessions ?? []);
+    this.payments = new Map(snapshot.payments ?? []);
+    this.creditBalances = new Map(snapshot.creditBalances ?? []);
+    this.creditLedger = snapshot.creditLedger ?? [];
+    this.settlements = new Map(snapshot.settlements ?? []);
+  }
+
+  async loadSnapshot() {
+    try {
+      const snapshot = (await this.dbStateService.load(this.stateKey)) as PersistedState | null;
+      if (!snapshot) return;
+
+      this.hydrate(snapshot);
+      this.logger.log('Loaded persisted app state from database');
+    } catch (error) {
+      this.logger.error('Failed to load app state snapshot', error as Error);
+    }
+  }
+
+  async persistSnapshot() {
+    try {
+      await this.dbStateService.save(this.stateKey, this.serialize());
+    } catch (error) {
+      this.logger.error('Failed to persist app state snapshot', error as Error);
+    }
+  }
 }
