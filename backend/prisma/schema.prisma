@@ -1,0 +1,306 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  owner
+  walker
+  admin
+}
+
+enum UserStatus {
+  active
+  suspended
+}
+
+enum WalkerApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum WalkRequestStatus {
+  pending
+  accepted
+  cancelled
+}
+
+enum WalkSessionType {
+  proxy
+  self
+}
+
+enum WalkSessionStatus {
+  accepted
+  in_progress
+  finished
+}
+
+enum PaymentProvider {
+  card
+  easy_pay
+  offline_pos
+}
+
+enum PaymentStatus {
+  prepared
+  confirmed
+  refunded
+}
+
+enum CreditLedgerType {
+  earn
+  spend
+  expire
+  adjust
+  refund
+}
+
+enum AuditAction {
+  create
+  update
+  approve
+  reject
+  cancel
+  accept
+  start
+  finish
+  confirm
+  refund
+  adjust
+  settle
+}
+
+model User {
+  id                   String                 @id @default(uuid()) @db.Uuid
+  role                 UserRole
+  name                 String
+  phone                String                 @unique
+  email                String?                @unique
+  passwordHash         String?                @map("password_hash")
+  status               UserStatus             @default(active)
+  walkerApprovalStatus WalkerApprovalStatus?   @map("walker_approval_status")
+  createdAt            DateTime               @default(now()) @map("created_at")
+  updatedAt            DateTime               @updatedAt @map("updated_at")
+
+  dogs                 Dog[]
+  ownerWalkRequests    WalkRequest[]          @relation("OwnerWalkRequests")
+  walkerWalkRequests   WalkRequest[]          @relation("WalkerWalkRequests")
+  ownerWalkSessions    WalkSession[]          @relation("OwnerWalkSessions")
+  walkerWalkSessions   WalkSession[]          @relation("WalkerWalkSessions")
+  payments             Payment[]
+  refreshTokens        RefreshToken[]
+  creditWallet         CreditWallet?
+  creditLedger         CreditLedgerEntry[]
+  settlements          Settlement[]
+  auditLogs            AuditLog[]             @relation("ActorAuditLogs")
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Dog {
+  id                   String        @id @default(uuid()) @db.Uuid
+  ownerUserId           String        @map("owner_user_id") @db.Uuid
+  name                 String
+  breed                String?
+  animalRegistrationNo String?       @unique @map("animal_registration_no")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  owner                User          @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  walkRequests         WalkRequest[]
+  walkSessions         WalkSession[]
+
+  @@index([ownerUserId])
+  @@map("dogs")
+}
+
+model WalkRequest {
+  id            String            @id @default(uuid()) @db.Uuid
+  ownerUserId   String            @map("owner_user_id") @db.Uuid
+  walkerUserId  String?           @map("walker_user_id") @db.Uuid
+  dogId         String            @map("dog_id") @db.Uuid
+  scheduledAt   DateTime          @map("scheduled_at")
+  requestNote   String?           @map("request_note")
+  status        WalkRequestStatus @default(pending)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  owner         User              @relation("OwnerWalkRequests", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  walker        User?             @relation("WalkerWalkRequests", fields: [walkerUserId], references: [id], onDelete: SetNull)
+  dog           Dog               @relation(fields: [dogId], references: [id], onDelete: Restrict)
+  session       WalkSession?
+
+  @@index([ownerUserId])
+  @@index([walkerUserId])
+  @@index([dogId])
+  @@index([status])
+  @@map("walk_requests")
+}
+
+model WalkSession {
+  id            String            @id @default(uuid()) @db.Uuid
+  walkRequestId String?           @unique @map("walk_request_id") @db.Uuid
+  ownerUserId   String            @map("owner_user_id") @db.Uuid
+  walkerUserId  String?           @map("walker_user_id") @db.Uuid
+  dogId         String            @map("dog_id") @db.Uuid
+  sessionType   WalkSessionType   @map("session_type")
+  status        WalkSessionStatus
+  startedAt     DateTime?         @map("started_at")
+  finishedAt    DateTime?         @map("finished_at")
+  distanceM     Int?              @map("distance_m")
+  durationSec   Int?              @map("duration_sec")
+  avgSpeedKmh   Float?            @map("avg_speed_kmh")
+  memo          String?
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  walkRequest   WalkRequest?      @relation(fields: [walkRequestId], references: [id], onDelete: SetNull)
+  owner         User              @relation("OwnerWalkSessions", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  walker        User?             @relation("WalkerWalkSessions", fields: [walkerUserId], references: [id], onDelete: SetNull)
+  dog           Dog               @relation(fields: [dogId], references: [id], onDelete: Restrict)
+  payments      Payment[]
+  locations     WalkLocation[]
+  media         WalkSessionMedia[]
+
+  @@index([ownerUserId])
+  @@index([walkerUserId])
+  @@index([dogId])
+  @@index([status])
+  @@map("walk_sessions")
+}
+
+model WalkLocation {
+  id            String      @id @default(uuid()) @db.Uuid
+  walkSessionId String      @map("walk_session_id") @db.Uuid
+  lat           Float
+  lng           Float
+  accuracy      Float?
+  capturedAt    DateTime    @map("captured_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  walkSession   WalkSession @relation(fields: [walkSessionId], references: [id], onDelete: Cascade)
+
+  @@index([walkSessionId, capturedAt])
+  @@map("walk_locations")
+}
+
+model WalkSessionMedia {
+  id            String      @id @default(uuid()) @db.Uuid
+  walkSessionId String      @map("walk_session_id") @db.Uuid
+  url           String
+  mediaType     String      @map("media_type")
+  memo          String?
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  walkSession   WalkSession @relation(fields: [walkSessionId], references: [id], onDelete: Cascade)
+
+  @@index([walkSessionId])
+  @@map("walk_session_media")
+}
+
+model Payment {
+  id            String          @id @default(uuid()) @db.Uuid
+  ownerUserId   String          @map("owner_user_id") @db.Uuid
+  walkSessionId String          @map("walk_session_id") @db.Uuid
+  provider      PaymentProvider
+  amountTotal   Int             @map("amount_total")
+  creditUsed    Int             @default(0) @map("credit_used")
+  amountPaid    Int             @map("amount_paid")
+  status        PaymentStatus   @default(prepared)
+  confirmedAt   DateTime?       @map("confirmed_at")
+  refundedAt    DateTime?       @map("refunded_at")
+  refundReason  String?         @map("refund_reason")
+  settlementId  String?         @map("settlement_id") @db.Uuid
+  idempotencyKey String?        @unique @map("idempotency_key")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  owner         User            @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  walkSession   WalkSession     @relation(fields: [walkSessionId], references: [id], onDelete: Restrict)
+  settlement    Settlement?     @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+
+  @@index([ownerUserId])
+  @@index([walkSessionId])
+  @@index([status])
+  @@map("payments")
+}
+
+model CreditWallet {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  balance   Int      @default(0)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledger    CreditLedgerEntry[]
+
+  @@map("credit_wallets")
+}
+
+model CreditLedgerEntry {
+  id        String           @id @default(uuid()) @db.Uuid
+  walletId  String           @map("wallet_id") @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      CreditLedgerType
+  amount    Int
+  memo      String?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  wallet    CreditWallet     @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([userId])
+  @@map("credit_ledger")
+}
+
+model Settlement {
+  id           String    @id @default(uuid()) @db.Uuid
+  walkerUserId String    @map("walker_user_id") @db.Uuid
+  grossAmount  Int       @map("gross_amount")
+  feeAmount    Int       @map("fee_amount")
+  netAmount    Int       @map("net_amount")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  walker       User      @relation(fields: [walkerUserId], references: [id], onDelete: Cascade)
+  payments     Payment[]
+
+  @@index([walkerUserId])
+  @@map("settlements")
+}
+
+model AuditLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  actorUserId String?    @map("actor_user_id") @db.Uuid
+  action     AuditAction
+  entityType String      @map("entity_type")
+  entityId   String      @map("entity_id")
+  metadata   Json?
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  actor      User?       @relation("ActorAuditLogs", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
