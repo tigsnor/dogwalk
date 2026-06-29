@@ -12,6 +12,7 @@ DogWalk 백엔드의 실행 가능한 초기 구조입니다.
 - 앱 상태 스냅샷 영속화(PostgreSQL `app_state` 테이블)
 - Prisma ORM 정규화 스키마 초안 (`prisma/schema.prisma`)
 - 공통 DB 모듈/트랜잭션 유틸 (`src/common/db`)
+- 인증/사용자 저장소 DB repository 1차 전환 (`UsersRepository`, `RefreshTokensRepository`)
 - 로컬 인프라 (`docker-compose.dev.yml`: Postgres, Redis)
 
 ## 환경변수 보안 요구사항
@@ -52,7 +53,7 @@ npm run prisma:generate
 npm run prisma:migrate:dev -- --name init_normalized_schema
 ```
 
-> 현재 서비스 로직은 아직 `AppStore` 스냅샷 경로를 사용합니다. 공통 DB 모듈이 준비되어 있으며, 다음 단계에서 서비스별 repository를 Prisma/DB 기반으로 전환합니다.
+> 인증/사용자/refresh token은 DB repository 경로로 전환됐고, 나머지 도메인은 아직 `AppStore` 스냅샷 경로를 사용합니다. 다음 단계에서 dogs/walks부터 Prisma/DB repository 기반으로 전환합니다.
 
 ## 현재 동작하는 핵심 API
 - `POST /api/v1/auth/signup/owner`
@@ -95,5 +96,5 @@ Authorization: Bearer <accessToken>
 ```
 
 ## 다음 단계
-1. 서비스 레이어를 Prisma repository 기반으로 전환하고 `AppStore` 스냅샷 경로 제거
+1. dogs/walks 서비스 레이어를 Prisma/DB repository 기반으로 전환하고 `AppStore` 스냅샷 경로 축소
 2. 산책/결제/정산/크레딧 비즈니스 로직 확장

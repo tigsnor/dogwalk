@@ -8,6 +8,7 @@ import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
 import { getEnv } from '../../config/env';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { UsersRepository } from '../repositories/users.repository';
 import { AppStore } from '../store/app.store';
 
 @Injectable()
@@ -15,9 +16,10 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly store: AppStore,
+    private readonly usersRepository: UsersRepository,
   ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
@@ -46,11 +48,13 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    const user = this.store.users.get(userId);
+    const user = await this.usersRepository.findById(userId);
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
 
+    this.store.users.set(user.id, user);
+    this.store.usersByPhone.set(user.phone, user.id);
     request.user = user;
     return true;
   }
