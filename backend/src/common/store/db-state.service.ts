@@ -1,15 +1,12 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { Pool } from 'pg';
-import { getEnv } from '../../config/env';
+import { Injectable } from '@nestjs/common';
+import { DatabaseService } from '../db/database.service';
 
 @Injectable()
-export class DbStateService implements OnModuleDestroy {
-  private readonly pool = new Pool({
-    connectionString: getEnv().databaseUrl,
-  });
+export class DbStateService {
+  constructor(private readonly database: DatabaseService) {}
 
   async ensureSchema() {
-    await this.pool.query(`
+    await this.database.query(`
       create table if not exists app_state (
         state_key text primary key,
         payload jsonb not null,
@@ -19,17 +16,17 @@ export class DbStateService implements OnModuleDestroy {
   }
 
   async load(stateKey: string) {
-    const result = await this.pool.query(
+    const result = await this.database.query<{ payload: unknown }>(
       `select payload from app_state where state_key = $1`,
       [stateKey],
     );
 
     if (result.rows.length === 0) return null;
-    return result.rows[0].payload as unknown;
+    return result.rows[0].payload;
   }
 
   async save(stateKey: string, payload: unknown) {
-    await this.pool.query(
+    await this.database.query(
       `
       insert into app_state (state_key, payload, updated_at)
       values ($1, $2::jsonb, now())
@@ -38,9 +35,5 @@ export class DbStateService implements OnModuleDestroy {
     `,
       [stateKey, JSON.stringify(payload)],
     );
-  }
-
-  async onModuleDestroy() {
-    await this.pool.end();
   }
 }

@@ -10,6 +10,8 @@ DogWalk 백엔드의 실행 가능한 초기 구조입니다.
   - auth, users, dogs, walks, payments, settlements, credits, admin
 - SQL 초안 스키마 (`db/schema.sql`)
 - 앱 상태 스냅샷 영속화(PostgreSQL `app_state` 테이블)
+- Prisma ORM 정규화 스키마 초안 (`prisma/schema.prisma`)
+- 공통 DB 모듈/트랜잭션 유틸 (`src/common/db`)
 - 로컬 인프라 (`docker-compose.dev.yml`: Postgres, Redis)
 
 ## 환경변수 보안 요구사항
@@ -39,6 +41,18 @@ npm install
 docker compose -f docker-compose.dev.yml up -d
 npm run start:dev
 ```
+
+
+## Prisma ORM 준비
+정규화 DB 전환을 위한 Prisma 스키마 초안이 `prisma/schema.prisma`에 있습니다.
+
+```bash
+cd backend
+npm run prisma:generate
+npm run prisma:migrate:dev -- --name init_normalized_schema
+```
+
+> 현재 서비스 로직은 아직 `AppStore` 스냅샷 경로를 사용합니다. 공통 DB 모듈이 준비되어 있으며, 다음 단계에서 서비스별 repository를 Prisma/DB 기반으로 전환합니다.
 
 ## 현재 동작하는 핵심 API
 - `POST /api/v1/auth/signup/owner`
@@ -81,5 +95,5 @@ Authorization: Bearer <accessToken>
 ```
 
 ## 다음 단계
-1. 도메인별 정규화 테이블 + ORM(Prisma/TypeORM)로 스냅샷 저장 구조 고도화
+1. 서비스 레이어를 Prisma repository 기반으로 전환하고 `AppStore` 스냅샷 경로 제거
 2. 산책/결제/정산/크레딧 비즈니스 로직 확장
