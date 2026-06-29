@@ -5,78 +5,70 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { AppStore, WalkRequest, WalkSession } from '../common/store/app.store';
+import { AppStore } from '../common/store/app.store';
 import { AuthUser } from '../common/types/auth-user';
+import { DogsRepository } from '../dogs/dogs.repository';
 import { CreateWalkRequestDto } from './dto/create-walk-request.dto';
 import { FinishWalkSessionDto } from './dto/finish-walk-session.dto';
+import { WalksRepository } from './walks.repository';
 
 @Injectable()
 export class WalksService {
-  constructor(private readonly store: AppStore) {}
+  constructor(
+    private readonly store: AppStore,
+    private readonly dogsRepository: DogsRepository,
+    private readonly walksRepository: WalksRepository,
+  ) {}
 
-  private nowIso() {
-    return new Date().toISOString();
-  }
-
-  createRequest(user: AuthUser, dto: CreateWalkRequestDto) {
-    const dog = this.store.dogs.get(dto.dogId);
-    if (!dog || dog.ownerUserId !== user.id) {
+  async createRequest(user: AuthUser, dto: CreateWalkRequestDto) {
+    const dog = await this.dogsRepository.findOwnedById(user.id, dto.dogId);
+    if (!dog) {
       throw new NotFoundException('Dog not found');
     }
 
-    const timestamp = this.nowIso();
-    const walkRequest: WalkRequest = {
-      id: randomUUID(),
-      ownerUserId: user.id,
-      dogId: dto.dogId,
-      scheduledAt: dto.scheduledAt,
-      requestNote: dto.requestNote,
-      status: 'pending',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
+    this.store.dogs.set(dog.id, dog);
+    const walkRequest = await this.walksRepository.createRequest(
+      user.id,
+      randomUUID(),
+      dto,
+    );
 
     this.store.walkRequests.set(walkRequest.id, walkRequest);
     return walkRequest;
   }
 
-  getRequests(user: AuthUser) {
-    const requests = [...this.store.walkRequests.values()];
-
-    if (user.role === 'owner') {
-      return requests.filter((request) => request.ownerUserId === user.id);
+  async getRequests(user: AuthUser) {
+    const requests = await this.walksRepository.findRequestsForUser(user.id, user.role);
+    for (const request of requests) {
+      this.store.walkRequests.set(request.id, request);
     }
-
-    if (user.role === 'walker') {
-      return requests.filter(
-        (request) =>
-          request.status === 'pending' ||
-          (request.status === 'accepted' && request.walkerUserId === user.id),
-      );
-    }
-
     return requests;
   }
 
-  getRequestById(user: AuthUser, requestId: string) {
-    const request = this.store.walkRequests.get(requestId);
+  async getRequestById(user: AuthUser, requestId: string) {
+    const request = await this.walksRepository.findRequestById(requestId);
     if (!request) {
       throw new NotFoundException('Walk request not found');
     }
 
     const isOwner = request.ownerUserId === user.id;
     const isAssignedWalker = request.walkerUserId === user.id;
-    const canAccess = isOwner || isAssignedWalker || (user.role === 'walker' && request.status === 'pending');
+    const canAccess =
+      isOwner ||
+      isAssignedWalker ||
+      user.role === 'admin' ||
+      (user.role === 'walker' && request.status === 'pending');
 
     if (!canAccess) {
       throw new ForbiddenException('No permission to view this walk request');
     }
 
+    this.store.walkRequests.set(request.id, request);
     return request;
   }
 
-  cancelRequest(user: AuthUser, requestId: string) {
-    const request = this.store.walkRequests.get(requestId);
+  async cancelRequest(user: AuthUser, requestId: string) {
+    const request = await this.walksRepository.findRequestById(requestId);
     if (!request || request.ownerUserId !== user.id) {
       throw new NotFoundException('Walk request not found');
     }
@@ -85,18 +77,17 @@ export class WalksService {
       throw new UnprocessableEntityException('Only pending requests can be cancelled');
     }
 
-    const updated: WalkRequest = {
-      ...request,
-      status: 'cancelled',
-      updatedAt: this.nowIso(),
-    };
+    const updated = await this.walksRepository.cancelRequest(requestId);
+    if (!updated) {
+      throw new NotFoundException('Walk request not found');
+    }
 
     this.store.walkRequests.set(requestId, updated);
     return updated;
   }
 
-  acceptRequest(user: AuthUser, requestId: string) {
-    const request = this.store.walkRequests.get(requestId);
+  async acceptRequest(user: AuthUser, requestId: string) {
+    const request = await this.walksRepository.findRequestById(requestId);
     if (!request) {
       throw new NotFoundException('Walk request not found');
     }
@@ -105,37 +96,16 @@ export class WalksService {
       throw new UnprocessableEntityException('Only pending requests can be accepted');
     }
 
-    const timestamp = this.nowIso();
-    const walkSession: WalkSession = {
-      id: randomUUID(),
-      walkRequestId: request.id,
-      ownerUserId: request.ownerUserId,
-      walkerUserId: user.id,
-      dogId: request.dogId,
-      status: 'accepted',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
+    const accepted = await this.walksRepository.acceptRequest(request, user.id);
 
-    const updatedRequest: WalkRequest = {
-      ...request,
-      status: 'accepted',
-      walkerUserId: user.id,
-      walkSessionId: walkSession.id,
-      updatedAt: timestamp,
-    };
+    this.store.walkSessions.set(accepted.session.id, accepted.session);
+    this.store.walkRequests.set(accepted.request.id, accepted.request);
 
-    this.store.walkSessions.set(walkSession.id, walkSession);
-    this.store.walkRequests.set(request.id, updatedRequest);
-
-    return {
-      request: updatedRequest,
-      session: walkSession,
-    };
+    return accepted;
   }
 
-  startSession(user: AuthUser, sessionId: string) {
-    const session = this.store.walkSessions.get(sessionId);
+  async startSession(user: AuthUser, sessionId: string) {
+    const session = await this.walksRepository.findSessionById(sessionId);
     if (!session || session.walkerUserId !== user.id) {
       throw new NotFoundException('Walk session not found');
     }
@@ -144,19 +114,17 @@ export class WalksService {
       throw new UnprocessableEntityException('Only accepted sessions can be started');
     }
 
-    const updated: WalkSession = {
-      ...session,
-      status: 'in_progress',
-      startedAt: this.nowIso(),
-      updatedAt: this.nowIso(),
-    };
+    const updated = await this.walksRepository.startSession(sessionId);
+    if (!updated) {
+      throw new NotFoundException('Walk session not found');
+    }
 
     this.store.walkSessions.set(sessionId, updated);
     return updated;
   }
 
-  finishSession(user: AuthUser, sessionId: string, dto: FinishWalkSessionDto) {
-    const session = this.store.walkSessions.get(sessionId);
+  async finishSession(user: AuthUser, sessionId: string, dto: FinishWalkSessionDto) {
+    const session = await this.walksRepository.findSessionById(sessionId);
     if (!session || session.walkerUserId !== user.id) {
       throw new NotFoundException('Walk session not found');
     }
@@ -166,25 +134,21 @@ export class WalksService {
     }
 
     const avgSpeedKmh = Number(((dto.distanceM / dto.durationSec) * 3.6).toFixed(2));
-    const timestamp = this.nowIso();
-
-    const updated: WalkSession = {
-      ...session,
-      status: 'finished',
-      distanceM: dto.distanceM,
-      durationSec: dto.durationSec,
+    const updated = await this.walksRepository.finishSession(
+      sessionId,
+      dto,
       avgSpeedKmh,
-      memo: dto.memo,
-      finishedAt: timestamp,
-      updatedAt: timestamp,
-    };
+    );
+    if (!updated) {
+      throw new NotFoundException('Walk session not found');
+    }
 
     this.store.walkSessions.set(sessionId, updated);
     return updated;
   }
 
-  getSessionById(user: AuthUser, sessionId: string) {
-    const session = this.store.walkSessions.get(sessionId);
+  async getSessionById(user: AuthUser, sessionId: string) {
+    const session = await this.walksRepository.findSessionById(sessionId);
     if (!session) {
       throw new NotFoundException('Walk session not found');
     }
@@ -193,6 +157,7 @@ export class WalksService {
       throw new ForbiddenException('No permission to view this walk session');
     }
 
+    this.store.walkSessions.set(session.id, session);
     return session;
   }
 }
