@@ -1,57 +1,61 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { AppStore, CreditLedgerEntry } from '../common/store/app.store';
 import { AuthUser } from '../common/types/auth-user';
+import { UsersRepository } from '../common/repositories/users.repository';
 import { AdminAdjustCreditDto } from './dto/admin-adjust-credit.dto';
+import { CreditsRepository } from './credits.repository';
 
 @Injectable()
 export class CreditsService {
-  constructor(private readonly store: AppStore) {}
+  constructor(
+    private readonly store: AppStore,
+    private readonly usersRepository: UsersRepository,
+    private readonly creditsRepository: CreditsRepository,
+  ) {}
 
-  private ensureUser(userId: string) {
-    if (!this.store.users.has(userId)) {
+  private async ensureUser(userId: string) {
+    const user = this.store.users.get(userId) ?? (await this.usersRepository.findById(userId));
+    if (!user) {
       throw new NotFoundException('User not found');
     }
+    this.store.users.set(user.id, user);
+    return user;
   }
 
-  getBalance(userId: string) {
-    this.ensureUser(userId);
-    return this.store.creditBalances.get(userId) ?? 0;
+  async getBalance(userId: string) {
+    await this.ensureUser(userId);
+    const balance = await this.creditsRepository.getBalance(userId);
+    this.store.creditBalances.set(userId, balance);
+    return balance;
   }
 
-  wallet(user: AuthUser) {
+  async wallet(user: AuthUser) {
     return {
       userId: user.id,
-      balance: this.getBalance(user.id),
+      balance: await this.getBalance(user.id),
     };
   }
 
-  ledger(user: AuthUser) {
-    return this.store.creditLedger.filter((entry) => entry.userId === user.id);
+  async ledger(user: AuthUser) {
+    const ledger = await this.creditsRepository.ledger(user.id);
+    this.store.creditLedger = [
+      ...this.store.creditLedger.filter((entry) => entry.userId !== user.id),
+      ...ledger,
+    ];
+    return ledger;
   }
 
-  addLedger(entry: Omit<CreditLedgerEntry, 'id' | 'createdAt'>) {
-    const created: CreditLedgerEntry = {
-      id: randomUUID(),
-      createdAt: new Date().toISOString(),
-      ...entry,
-    };
-    this.store.creditLedger.push(created);
-
-    const current = this.getBalance(entry.userId);
-    const next = current + entry.amount;
-    if (next < 0) {
-      this.store.creditLedger.pop();
-      throw new UnprocessableEntityException('Insufficient credit balance');
-    }
-    this.store.creditBalances.set(entry.userId, next);
-
-    return created;
+  async addLedger(entry: Omit<CreditLedgerEntry, 'id' | 'createdAt'>) {
+    await this.ensureUser(entry.userId);
+    const { ledger, balance } = await this.creditsRepository.addLedger(entry);
+    this.store.creditLedger.push(ledger);
+    this.store.creditBalances.set(entry.userId, balance);
+    return ledger;
   }
 
-  adminAdjust(dto: AdminAdjustCreditDto) {
-    this.ensureUser(dto.userId);
-    const ledger = this.addLedger({
+  async adminAdjust(dto: AdminAdjustCreditDto) {
+    await this.ensureUser(dto.userId);
+    const ledger = await this.addLedger({
       userId: dto.userId,
       type: 'adjust',
       amount: dto.amount,
@@ -60,7 +64,7 @@ export class CreditsService {
 
     return {
       ledger,
-      balance: this.getBalance(dto.userId),
+      balance: await this.getBalance(dto.userId),
     };
   }
 }

@@ -54,7 +54,7 @@ npm run prisma:generate
 npm run prisma:migrate:dev -- --name init_normalized_schema
 ```
 
-> 인증/사용자/refresh token과 dogs/walks는 DB repository 경로로 전환됐고, payments/credits/settlements는 아직 `AppStore` 스냅샷 경로를 사용합니다. 다음 단계에서 결제/크레딧/정산 repository를 DB 기반으로 전환합니다.
+> 인증/사용자/refresh token, dogs/walks, payments/credits/settlements는 DB repository 경로로 전환됐습니다. `AppStore`는 현재 호환 캐시/스냅샷 역할로 남아 있으며, 다음 단계에서 남은 스냅샷 의존성을 더 축소합니다.
 
 ## 현재 동작하는 핵심 API
 - `POST /api/v1/auth/signup/owner`
@@ -97,5 +97,6 @@ Authorization: Bearer <accessToken>
 ```
 
 ## 다음 단계
-1. payments/credits/settlements 서비스 레이어를 Prisma/DB repository 기반으로 전환하고 `AppStore` 스냅샷 경로 축소
-2. 산책/결제/정산/크레딧 비즈니스 로직 확장
+1. 결제 승인/환불과 크레딧 차감/복구를 하나의 DB transaction으로 묶어 원자성 강화
+2. `AppStore` 스냅샷 의존성 축소 및 Prisma migration/client 기반 repository로 점진 전환
+3. 산책/결제/정산/크레딧 비즈니스 로직 확장

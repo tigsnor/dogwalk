@@ -5,26 +5,24 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { AppStore, Payment } from '../common/store/app.store';
+import { AppStore } from '../common/store/app.store';
 import { AuthUser } from '../common/types/auth-user';
 import { CreditsService } from '../credits/credits.service';
 import { ConfirmPaymentDto } from './dto/confirm-payment.dto';
 import { PreparePaymentDto } from './dto/prepare-payment.dto';
 import { RefundPaymentDto } from './dto/refund-payment.dto';
+import { PaymentsRepository } from './payments.repository';
 
 @Injectable()
 export class PaymentsService {
   constructor(
     private readonly store: AppStore,
     private readonly creditsService: CreditsService,
+    private readonly paymentsRepository: PaymentsRepository,
   ) {}
 
-  private nowIso() {
-    return new Date().toISOString();
-  }
-
-  prepare(user: AuthUser, dto: PreparePaymentDto) {
-    const walkSession = this.store.walkSessions.get(dto.walkSessionId);
+  async prepare(user: AuthUser, dto: PreparePaymentDto) {
+    const walkSession = await this.paymentsRepository.findSessionForOwner(user.id, dto.walkSessionId);
     if (!walkSession || walkSession.ownerUserId !== user.id) {
       throw new NotFoundException('Walk session not found');
     }
@@ -38,12 +36,11 @@ export class PaymentsService {
       throw new UnprocessableEntityException('creditUsed cannot exceed amountTotal');
     }
 
-    if (creditUsed > this.creditsService.getBalance(user.id)) {
+    if (creditUsed > (await this.creditsService.getBalance(user.id))) {
       throw new UnprocessableEntityException('Insufficient credit balance');
     }
 
-    const timestamp = this.nowIso();
-    const payment: Payment = {
+    const payment = await this.paymentsRepository.createPrepared({
       id: randomUUID(),
       ownerUserId: user.id,
       walkSessionId: dto.walkSessionId,
@@ -51,17 +48,14 @@ export class PaymentsService {
       amountTotal: dto.amountTotal,
       creditUsed,
       amountPaid: dto.amountTotal - creditUsed,
-      status: 'prepared',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    };
+    });
 
     this.store.payments.set(payment.id, payment);
     return payment;
   }
 
-  confirm(user: AuthUser, dto: ConfirmPaymentDto) {
-    const payment = this.store.payments.get(dto.paymentId);
+  async confirm(user: AuthUser, dto: ConfirmPaymentDto) {
+    const payment = await this.paymentsRepository.findById(dto.paymentId);
     if (!payment || payment.ownerUserId !== user.id) {
       throw new NotFoundException('Payment not found');
     }
@@ -71,7 +65,7 @@ export class PaymentsService {
     }
 
     if (payment.creditUsed > 0) {
-      this.creditsService.addLedger({
+      await this.creditsService.addLedger({
         userId: user.id,
         type: 'spend',
         amount: -payment.creditUsed,
@@ -79,20 +73,17 @@ export class PaymentsService {
       });
     }
 
-    const timestamp = this.nowIso();
-    const updated: Payment = {
-      ...payment,
-      status: 'confirmed',
-      confirmedAt: timestamp,
-      updatedAt: timestamp,
-    };
+    const updated = await this.paymentsRepository.confirm(payment.id);
+    if (!updated) {
+      throw new NotFoundException('Payment not found');
+    }
 
     this.store.payments.set(updated.id, updated);
     return updated;
   }
 
-  getById(user: AuthUser, paymentId: string) {
-    const payment = this.store.payments.get(paymentId);
+  async getById(user: AuthUser, paymentId: string) {
+    const payment = await this.paymentsRepository.findById(paymentId);
     if (!payment) {
       throw new NotFoundException('Payment not found');
     }
@@ -104,8 +95,8 @@ export class PaymentsService {
     return payment;
   }
 
-  refund(paymentId: string, dto: RefundPaymentDto) {
-    const payment = this.store.payments.get(paymentId);
+  async refund(paymentId: string, dto: RefundPaymentDto) {
+    const payment = await this.paymentsRepository.findById(paymentId);
     if (!payment) {
       throw new NotFoundException('Payment not found');
     }
@@ -115,7 +106,7 @@ export class PaymentsService {
     }
 
     if (payment.creditUsed > 0) {
-      this.creditsService.addLedger({
+      await this.creditsService.addLedger({
         userId: payment.ownerUserId,
         type: 'refund',
         amount: payment.creditUsed,
@@ -123,36 +114,32 @@ export class PaymentsService {
       });
     }
 
-    const timestamp = this.nowIso();
-    const updated: Payment = {
-      ...payment,
-      status: 'refunded',
-      refundedAt: timestamp,
-      refundReason: dto.reason,
-      updatedAt: timestamp,
-    };
+    const updated = await this.paymentsRepository.refund(payment.id, dto.reason ?? 'admin refund');
+    if (!updated) {
+      throw new NotFoundException('Payment not found');
+    }
 
     this.store.payments.set(updated.id, updated);
     return updated;
   }
 
-  unsettledConfirmedPayments() {
-    return [...this.store.payments.values()].filter(
-      (payment) => payment.status === 'confirmed' && !payment.settlementId,
-    );
+  async unsettledConfirmedPayments() {
+    const payments = await this.paymentsRepository.unsettledConfirmedPayments();
+    for (const payment of payments) {
+      this.store.payments.set(payment.id, payment);
+    }
+    return payments;
   }
 
-  markSettled(paymentIds: string[], settlementId: string) {
-    const timestamp = this.nowIso();
-
+  async markSettled(paymentIds: string[], settlementId: string) {
+    await this.paymentsRepository.markSettled(paymentIds, settlementId);
     for (const paymentId of paymentIds) {
       const payment = this.store.payments.get(paymentId);
       if (!payment) continue;
-
       this.store.payments.set(paymentId, {
         ...payment,
         settlementId,
-        updatedAt: timestamp,
+        updatedAt: new Date().toISOString(),
       });
     }
   }
